@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<style type="text/css">
+		body{
+	background-color: #0F0929;
+	margin: 0 auto;
+	font-family: sans-serif;
+}
+#heading{
+	margin-top: 30px;
+	color: white;
+}
+#main-content{
+	display: flex;
+	flex-wrap: wrap;
+	flex-direction: row;
+	justify-content: space-around;
+}
+#chart{
+	margin: 50px 30px 30px 30px;
+	width: 57vw;
+	height: 70vh;
+	background-color: #13184E;
+	border-radius: 10px;
+	overflow: hidden;
+}
+#list{
+	margin: 50px 30px 30px 30px;
+	width: 30vw;
+	height: 64vh;
+	
+}
+#detail{
+	position: relative;
+	right: 280px;
+	width: 57vw;
+	height: 30vh;
+	
+}
+.stocks{
+	margin: 10px;
+	margin-right: 25px;
+	width: 60px;
+	height: 20px;
+   background-color: #1A2164;
+   color: white;
+   border: none;
+   border-radius: 5px;
+   box-shadow: 0px 0px 2px 2px grey;
+}
+.stocks:hover{
+	cursor: pointer;
+	background-color: black;
+	color: white;
+	border-radius: 0px 0px 2px 2px white;
+}
+.bookvalue{
+	font-size: 18px;
+	color: white;
+    text-align: justify;
+    margin: 5px;
+    margin-right: 25px;
+}
+.value{
+	font-size: 15px;
+    text-align: justify;
+	margin: 5px;
+}
+.profit{
+	color: #38813B;
+}
+
+.fail{
+	color: red;
+}
+.divs{
+	position: relative;
+	left: 202px;
+}
+.myclass{
+	font-size: 20px;
+	color: white;
+	margin: 10px;
+}
+.para{
+	color: white;
+	font-size: 13px;
+	margin: 10px;
+
+}
+.error{
+	text-align: center;
+	margin: 50px;
+}
+.graphbuttons{
+	width: 100px;
+	height: 30px;
+	border-radius: 15px;
+	color: white;
+	font-size: 19px;
+	background-color: #1A2164;
+	margin-right: 20px;
+	z-index: 1;
+	border: none;
+}
+.graphbuttons:hover{
+	cursor: pointer;
+	background-color: #0C3370;
+}
+.position{
+	position: relative;
+	top: -280px;
+	left: 200px;
+}
+	</style>
+	<script src = "plotly.min.js"></script>
+	<title></title>
+</head>
+<body>
+	<header><h1 id = 'heading' style="text-align: center;">Stock Market Analysis</h1></header>
+	<main id = "main-content">
+<div id = 'chart'></div>
+<div id = 'list'></div>
+<div id = 'detail'></div>
+</main>
+
+<script>'use strict'
+async function main(){
+	try{
+	const summarydata = await fetch('https://stocks3.onrender.com/api/stocks/getstockstatsdata');
+	const detaildata = await fetch('https://stocks3.onrender.com/api/stocks/getstocksprofiledata');
+	const chartdata = await fetch('https://stocks3.onrender.com/api/stocks/getstocksdata');
+		if(!detaildata.ok)
+		{
+			throw new Error('Not able to fetch data from detail Server');
+		}
+	if(!summarydata.ok)
+	{
+		throw new Error('Not able to fetch data from List Server');
+	}
+	if(!chartdata.ok)
+	{
+		throw new Error('Not able to fetch data from Chart Server');
+	}
+	const renderdata = await detaildata.json();
+	const reqdata = await summarydata.json();
+	const chartlydata = await chartdata.json();
+	const chartpoints = [];
+	chartlydata.stocksData.forEach((stock)=>{
+		return Object.keys(stock).forEach((setstock)=>{
+			if(setstock !== '_id')
+			{
+				chartpoints.push({stockName: setstock, stockPoints: stock[setstock]});
+			}
+		});
+	})
+	console.log(chartpoints);
+	const summaries = [];
+	renderdata.stocksProfileData.forEach((stock)=>{
+		return Object.keys(stock).forEach((setstock)=>{
+			if(setstock !== '_id')
+			{
+                 summaries.push({ stockName: setstock, stockDetails : stock[setstock]});
+			}
+		});
+	});
+	let i = 0;
+	const nameofstocks = [];
+    const bookvalue = [];
+    const profit = [];
+	reqdata.stocksStatsData.forEach((stock) =>{
+	
+		return Object.keys(stock).forEach((setstock)=>{
+				if(setstock !== '_id')
+	   {	nameofstocks.push(setstock);
+	        bookvalue.push(stock[setstock].bookValue);
+	        profit.push(stock[setstock].profit);
+			}
+		});
+
+	});
+	const list = document.querySelector('#list');
+	const detail = document.querySelector('#detail');
+	const charts = document.querySelector('#chart');
+	const buttondiv = document.createElement('div');
+	nameofstocks.forEach((stock,i)=>{
+		const divblock = document.createElement('div')
+		const button = document.createElement('button');
+		const book = document.createElement('span')
+		const profitEl = document.createElement('span')
+		profitEl.textContent = `${profit[i].toFixed(2)} %`;
+		profitEl.classList.add('value')
+		if(profit[i]>0.00)
+		{
+			profitEl.classList.add('profit');
+		}	
+		else
+		{
+			profitEl.classList.add('fail');
+		}
+		book.textContent = `$ ${bookvalue[i]}`;
+		book.classList.add('bookvalue');
+		button.dataset.stock = stock;
+		button.textContent = stock;
+		button.classList.add('stocks');
+		button.addEventListener('click',(e)=>{
+            chartMaking(e)
+			detailing(e)
+			
+		});
+		divblock.append(button,book,profitEl);
+		divblock.classList.add('divs');
+		list.appendChild(divblock);
+	});
+
+		detailing({target: {dataset: {stock: 'AAPL'}}})
+		chartMaking({target:{dataset:{stock: 'AAPL'}}})
+		chartdeciding({target:{value: '5y'}},'AAPL')
+	 function detailing(e){
+	 	detail.innerHTML = '';
+		const value = e.target.dataset.stock;
+		summaries.forEach((sum,i) =>{
+             if(sum.stockName === value)
+             { 
+             	const divblock1 = document.createElement('div');
+              	const span1 = document.createElement('span');
+             	span1.textContent = sum.stockName;
+             	span1.classList.add('myclass');
+             	const span2 = document.createElement('span');
+             	span2.textContent = `${profit[i].toFixed(5)} %`;
+             	span2.classList.add('myclass')
+             	if(profit[i]>0)
+             	{
+             		span2.style.color = '#38813B';
+             	}
+             	else
+             	{
+             		span2.style.color = 'red';
+             		span2.textContent = `${profit[i].toFixed(2)} %`;
+             	}
+             	const span3 = document.createElement('span');
+             	span3.textContent = `$ ${bookvalue[i]}`;
+             	span3.classList.add('myclass');
+             	divblock1.append(span1, span2 , span3);
+                detail.appendChild(divblock1);
+                const ptag = document.createElement('p');
+                ptag.textContent = sum.stockDetails.summary;
+                ptag.classList.add('para');
+                detail.appendChild(ptag)
+             }
+		});
+	} 
+console.log(chartpoints);    
+	function chartdeciding(e,value1){
+		const value = e.target.value
+		chartpoints.forEach((points)=>{
+          	if(points.stockName === value1)
+          	{
+              const arr = points.stockPoints[value];
+              
+              const xdata = arr.value.map((xpoint) =>{return xpoint});
+              const ydata = arr.timeStamp.map((ypoint)=>{const newdata = new Date(ypoint*1000).toLocaleDateString()
+               return newdata});
+              const pinpoints = [{
+              	x: ydata,
+              	y: xdata,
+              	mode: "lines",
+              	type: 'scatter',
+              	line: {
+              		color: 'limegreen',
+              		width: 3
+              	},
+                hovertemplate: `${value1}: $%{y:.2f}<extra></extra>`
+              }]
+              
+              
+              console.log(pinpoints)
+             let layout = {
+              	
+              	hoverlabel: {bgcolor:'#13184E',bordercolor: '#13184E', font:{color: 'white'}},
+              	xaxis: {showgrid: false,
+              	 showline: false,
+              	  showticklabels: false
+                  
+              	  },
+              	yaxis: {showgrid: false,
+              	 showline: false,
+              	 showticklabels: false,
+                 hoverlabel: {font: {color: 'grey'}}
+              	  },
+              	margin: {l: 0,
+              	r: 150,
+              	t: 0,
+              	b: 50},
+              	paper_bgcolor: '#13184E',
+              	plot_bgcolor: 'rgba(0,0,0,0)',
+              	hovermode: 'x',
+              	hoverdistance: 100
+              };
+              let config = {
+              	responsive: true,
+                displayModeBar: false};
+              Plotly.newPlot(charts, pinpoints,layout, config)
+          	}
+          });
+	}
+	function chartMaking(e){
+          const value1 = e.target.dataset.stock;
+          chartdeciding({target:{value: '5y'}},value1)
+          buttondiv.innerHTML = '';
+          const button1 = document.createElement('button');
+          const button2 = document.createElement('button');
+          const button3 = document.createElement('button');
+          const button4 = document.createElement('button');
+          button1.textContent = '1 Month';
+          button2.textContent = '3 Month';
+          button3.textContent = '1 Year';
+          button4.textContent = '5 Year';
+          button1.classList.add('graphbuttons');
+          button2.classList.add('graphbuttons');
+          button3.classList.add('graphbuttons');
+          button4.classList.add('graphbuttons');
+          buttondiv.append(button1,button2,button3,button4);
+          buttondiv.style.zIndex = '100'
+          document.querySelector('body').appendChild(buttondiv);
+          buttondiv.classList.add('position')
+          button1.value = '1mo';
+          button2.value = '3mo';
+          button3.value = '1y';
+          button4.value = '5y';
+          button1.addEventListener('click',(e)=>{chartdeciding(e,value1)});
+          button2.addEventListener('click',(e)=>{chartdeciding(e,value1)})
+          button3.addEventListener('click',(e)=>{chartdeciding(e,value1)})
+          button4.addEventListener('click',(e)=>{chartdeciding(e,value1)})
+	}
+}
+catch(err){
+	const main = document.querySelector('body');
+	main.innerHTML = '';
+	const heading11 = document.createElement('h1')
+	heading11.textContent = `Uh Oh!Something went Wrong.Please Refresh the Page and try Again Later.Cause of Error: ${err}`;
+	heading11.classList.add('error');
+	main.appendChild(heading11);
+	main.style.backgroundColor = 'white';
+}
+}
+main();
+</script>
+</body>
+</html>
